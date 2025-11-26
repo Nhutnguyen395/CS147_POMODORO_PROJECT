@@ -20,7 +20,7 @@
 String iothubName = "cs147group11IoTHub";
 String deviceName = "146esp32";
 String url = "https://" + iothubName + ".azure-devices.net/devices/" + deviceName + "/messages/events?api-version=2021-04-12";
-String sasToken = "SharedAccessSignature sr=cs147group11IoTHub.azure-devices.net&sig=t45FKi44kYSmYE3y5xze3PzC2ToNeFRdc0BP1%2BkZg1w%3D&se=1764120276&skn=iothubowner";
+String sasToken = "SharedAccessSignature sr=cs147group11IoTHub.azure-devices.net&sig=n8p%2BAXEJyFZpszRpKu9Y8bRGcDJkDkSuirPby4YiH10%3D&se=101764121160&skn=iothubowner";
 
 // DigiCert Global Root G2 (Standard for Azure)
 const char* root_ca = \
@@ -56,7 +56,6 @@ const char* root_ca = \
 // --- SENSOR CONFIG ---
 DHT20 dht;
 unsigned long lastTelemetryTime = 0;
-#define TELEMETRY_INTERVAL 3000
 
 // --- STATES ---
 #define START_STATE 0
@@ -117,7 +116,7 @@ void setup() {
 
   if (TEST_MODE) {
     STUDY_MILLIS = 5000; // 5 seconds
-    BREAK_MILLIS = 10000; // 3 seconds
+    BREAK_MILLIS = 3000; // 3 seconds
   } else {
     STUDY_MILLIS = 25 * 60 * 1000;
     BREAK_MILLIS = 5 * 60 * 1000;
@@ -212,14 +211,7 @@ void printTotalTime() {
 
 void loop() {
   unsigned long current_time = millis();
-
-  // 1. Send Telemetry (Every 3 seconds in background)
-  if (current_time - lastTelemetryTime >= TELEMETRY_INTERVAL) {
-    sendTelemetry();
-    lastTelemetryTime = current_time;
-  }
-  
-   // 2. Read Button
+   // 1. Read Button
   bool button_pressed = (digitalRead(BUTTON_PIN) == HIGH);
 
   // 2. STATE MACHINE
@@ -234,7 +226,6 @@ void loop() {
         while(digitalRead(BUTTON_PIN) == HIGH); 
         state = STUDY_STATE;
         state_start_time = millis();
-        sendTelemetry();
       }
       break;
 
@@ -259,6 +250,7 @@ void loop() {
 
         // update azure
         sendTelemetry();
+        total_study_time_ms = 0;
       }
       // CASE B: TIMER FINISHED
       else if (current_time - state_start_time >= STUDY_MILLIS) {
@@ -276,7 +268,6 @@ void loop() {
         // Start Break
         state = BREAK_STATE;
         state_start_time = millis();
-        sendTelemetry();
       }
       break;
 
@@ -289,15 +280,16 @@ void loop() {
         Serial.println("STOPPING...");
         while(digitalRead(BUTTON_PIN) == HIGH);
         state = START_STATE;
+        sendTelemetry();
+        total_study_time_ms = 0;
       }
-      else if (current_time - state_start_time >= BREAK_MILLIS) {
+      else if (current_time - state_start_time >= BREAK_MILLIS){
         Serial.println("Break Time Finished.");
         buzz(); 
         digitalWrite(RED_PIN, HIGH);
         digitalWrite(GREEN_PIN, LOW);
         state = STUDY_STATE;
         state_start_time = millis();
-        sendTelemetry();
       }
       break;
   }
