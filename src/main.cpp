@@ -13,7 +13,7 @@
 #define BUZZER_PIN 13
 
 // WIFI and AZURE CONFIG
-#define WIFI_SSID "Nhut-iPhone"
+#define WIFI_SSID "alvis"
 #define WIFI_PASSWORD "abcdefgh"
 
 // Azure Configuration
@@ -117,7 +117,7 @@ void setup() {
 
   if (TEST_MODE) {
     STUDY_MILLIS = 5000; // 5 seconds
-    BREAK_MILLIS = 3000; // 3 seconds
+    BREAK_MILLIS = 10000; // 3 seconds
   } else {
     STUDY_MILLIS = 25 * 60 * 1000;
     BREAK_MILLIS = 5 * 60 * 1000;
@@ -152,8 +152,6 @@ void sendTelemetry(){
     doc["status"] = "studying";
   } else if(state == BREAK_STATE){
     doc["status"] = "break";
-  } else {
-    doc["status"] = "idle";
   }
 
   char buffer[256];
@@ -195,7 +193,7 @@ void buzz() {
   // 2. Turn Buzzer ON (1500Hz)
   ledcWrite(BUZZER_CHANNEL, 128); 
   
-  // 3. Wait 5 seconds
+  // 3. Wait 2 seconds
   delay(2000); 
   
   // 4. Turn Buzzer OFF
@@ -273,7 +271,8 @@ void loop() {
         printTotalTime();
 
         buzz(); 
-        
+        digitalWrite(RED_PIN, LOW);
+        digitalWrite(GREEN_PIN, HIGH);
         // Start Break
         state = BREAK_STATE;
         state_start_time = millis();
@@ -292,14 +291,13 @@ void loop() {
         state = START_STATE;
       }
       else if (current_time - state_start_time >= BREAK_MILLIS) {
-        // *** BREAK OVER ***
-        // New: Buzz here too!
         Serial.println("Break Time Finished.");
         buzz(); 
-        
-        // Back to Study
+        digitalWrite(RED_PIN, HIGH);
+        digitalWrite(GREEN_PIN, LOW);
         state = STUDY_STATE;
         state_start_time = millis();
+        sendTelemetry();
       }
       break;
   }
